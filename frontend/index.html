@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de ETS - Alumnos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar-brand { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">ESCOM - Sistema de Gestión de ETS</span>
+            <a href="admin.html" class="btn btn-outline-light btn-sm">Acceso Administrativo</a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        
+        <!-- Buscador Inteligente -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Buscador Inteligente de Calendarios</h5>
+            </div>
+            <div class="card-body">
+                <!-- ID IMPORTANTE: form-busqueda -->
+                <form id="form-busqueda" onsubmit="return false;">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Carrera</label>
+                            <select class="form-select" id="carrera_id">
+                                <option value="">Todas las carreras</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Semestre</label>
+                            <select class="form-select" id="semestre">
+                                <option value="">Todos</option>
+                                <option value="1">1° Semestre</option>
+                                <option value="2">2° Semestre</option>
+                                <option value="3">3° Semestre</option>
+                                <option value="4">4° Semestre</option>
+                                <option value="5">5° Semestre</option>
+                                <option value="6">6° Semestre</option>
+                                <option value="7">7° Semestre</option>
+                                <option value="8">8° Semestre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Unidad de Aprendizaje (Materia)</label>
+                            <input type="text" class="form-control" id="materia" placeholder="Ej. Estructuras de Datos...">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Botón de PDF oculto por defecto -->
+        <div class="d-flex justify-content-end mb-2">
+            <button id="btn-pdf-alumno" class="btn btn-outline-danger d-none d-flex align-items-center gap-2">
+                Descargar mi Horario PDF
+            </button>
+        </div>
+
+        <!-- Tabla de Resultados -->
+        <div class="table-responsive bg-white shadow-sm rounded">
+            <table class="table table-striped table-hover align-middle border mb-0" id="tabla-busqueda">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Materia</th>
+                        <th>Carrera</th>
+                        <th class="text-center">Sem.</th>
+                        <th>Fecha y Hora</th>
+                        <th>Turno</th>
+                        <th>Lugar (Edificio / Salón)</th>
+                        <th>Profesor Evaluador</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Aquí se inyectan los resultados con JS -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Librerías de Bootstrap y PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- Nuestro script principal con versión para evitar caché -->
+    <script src="js/main.js?v=3"></script>
+</body>
+</html>
