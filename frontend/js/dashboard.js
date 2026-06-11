@@ -17,40 +17,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("body-dashboard").style.display = "block";
                 document.getElementById("admin-name").textContent = `Hola, ${data.user.nombre_completo}`;
                 cargarExamenesAdmin();
+                cargarEstadisticas();
+                cargarListaCarreras();
+                cargarListaEspacios();
             }
         })
         .catch(error => console.error("Error de sesión:", error));
 
-    // 2. Cargar catálogos
-    fetch("../backend/src/Public/get_carreras.php").then(r => r.json()).then(data => {
-        const select = document.getElementById("carrera_id");
-        select.innerHTML = '<option value="">Seleccione una carrera...</option>';
-        data.forEach(c => select.innerHTML += `<option value="${c.id}">${c.nombre}</option>`);
-    });
-
-    fetch("../backend/src/Public/get_espacios.php").then(r => r.json()).then(data => {
-        const select = document.getElementById("espacio_id");
-        select.innerHTML = '<option value="">Seleccione un espacio...</option>';
-        data.forEach(e => select.innerHTML += `<option value="${e.id}">${e.edificio} - ${e.salon}</option>`);
-    });
-
     // 3. NUEVO: Buscador en tiempo real para el Administrador
     const buscadorAdmin = document.getElementById("buscador-admin");
     if (buscadorAdmin) {
-        buscadorAdmin.addEventListener("input", function() {
-            const textoBusqueda = this.value.toLowerCase();
-            // Buscamos todas las filas dentro de la tabla
+        buscadorAdmin.addEventListener("input", function(e) {
+            const termino = quitarAcentos(e.target.value.toLowerCase());
             const filas = document.querySelectorAll("#tabla-admin-examenes tr"); 
 
             filas.forEach(fila => {
-                const contenidoFila = fila.textContent.toLowerCase();
-                if (contenidoFila.includes(textoBusqueda)) {
+                if (fila.cells.length === 1) return;
+                const textoFila = quitarAcentos(fila.textContent.toLowerCase());
+                if (textoFila.includes(termino)) {
                     fila.style.display = "";
                 } else {
                     fila.style.display = "none";
                 }
             });
         });
+    }
+
+    function quitarAcentos(texto) {
+        return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
     // 4. Botones del Modal
@@ -84,6 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.success) {
                 modalExamen.hide();
                 cargarExamenesAdmin();
+                cargarEstadisticas();
             } else {
                 alert("Error: " + data.message);
             }
@@ -93,10 +88,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 5. Botón PDF
     document.getElementById("btn-pdf").addEventListener("click", () => {
-        const tablaOriginal = document.getElementById("tabla-reporte");
+        const tablaOriginal = document.getElementById("tabla-admin-examenes"); // Asegúrate de que este ID sea el correcto de tu tabla
         const clonTabla = tablaOriginal.cloneNode(true);
 
-        clonTabla.querySelector(".col-acciones").remove();
+        // Limpiamos la columna de acciones para que no salgan los botones en el PDF
+        const colAcciones = clonTabla.querySelector(".col-acciones");
+        if (colAcciones) colAcciones.remove();
+        
         clonTabla.querySelectorAll("tr").forEach(tr => {
             const ultimaCelda = tr.lastElementChild;
             if (ultimaCelda && (ultimaCelda.innerHTML.includes("Editar") || ultimaCelda.tagName === "TD")) {
@@ -104,9 +102,16 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        // Le quitamos las clases responsivas que puedan romper el PDF en monitores pequeños
+        clonTabla.classList.remove("table-responsive");
+        clonTabla.style.fontSize = "12px";
+        clonTabla.style.width = "100%";
+
         const contenedorReporte = document.createElement("div");
         contenedorReporte.style.padding = "20px";
         contenedorReporte.style.fontFamily = "Arial, sans-serif";
+        contenedorReporte.style.width = "1000px"; // Ancho fijo para evitar cortes
+        contenedorReporte.style.backgroundColor = "#ffffff";
 
         contenedorReporte.innerHTML = `
             <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #333; padding-bottom: 15px;">
@@ -119,7 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         `;
         
-        clonTabla.style.fontSize = "12px";
         contenedorReporte.appendChild(clonTabla);
 
         const opciones = {
@@ -130,7 +134,15 @@ document.addEventListener("DOMContentLoaded", () => {
             jsPDF:        { unit: 'mm', format: 'letter', orientation: 'landscape' }
         };
 
-        html2pdf().set(opciones).from(contenedorReporte).save();
+        // --- EL PARCHE DEL SCROLL ---
+        const scrollActual = window.scrollY; // Guardamos dónde está el administrador
+        window.scrollTo(0, 0);               // Subimos al tope de la página
+
+        setTimeout(() => {
+            html2pdf().set(opciones).from(contenedorReporte).save().then(() => {
+                window.scrollTo(0, scrollActual); // Lo regresamos a su lugar al terminar
+            });
+        }, 300); // 300ms de pausa para que el navegador respire
     });
 
     // 6. Botón Cerrar Sesión
@@ -212,6 +224,157 @@ function eliminarExamen(id) {
         formData.append("id", id);
         fetch("../backend/src/CRUD/delete_examen.php", { method: "POST", body: formData })
         .then(r => r.json())
-        .then(data => { if (data.success) cargarExamenesAdmin(); });
+        .then(data => { 
+            if (data.success) {
+                cargarExamenesAdmin(); 
+                cargarEstadisticas();
+            }
+        }
+        );
     }
 }
+
+function cargarEstadisticas() {
+    fetch("../backend/src/CRUD/get_estadisticas.php")
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const contenedor = document.getElementById("contenedor-estadisticas");
+                
+                let html = `
+                    <div class="col-lg-2 col-md-3 col-sm-6 mb-3">
+                        <div class="card text-white bg-primary shadow-sm h-100">
+                            <div class="card-body p-3 d-flex flex-column justify-content-center">
+                                <h6 class="card-title text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Total Exámenes</h6>
+                                <h3 class="card-text fw-bold mb-0">${data.total}</h3>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                data.por_carrera.forEach(item => {
+                    html += `
+                    <div class="col-lg-2 col-md-3 col-sm-6 mb-3">
+                        <div class="card bg-white shadow-sm h-100 border-0 border-start border-primary border-4">
+                            <div class="card-body p-3 d-flex flex-column justify-content-center">
+                                <h6 class="card-title text-muted text-uppercase fw-bold mb-1" style="font-size: 0.65rem; line-height: 1.2;">${item.carrera}</h6>
+                                <h4 class="card-text text-dark mb-0">${item.cantidad}</h4>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+
+                contenedor.innerHTML = html;
+            }
+        })
+        .catch(error => console.error("Error al cargar estadísticas:", error));
+}
+
+document.getElementById("btn-carreras").addEventListener("click", () => {
+    cargarListaCarreras();
+    new bootstrap.Modal(document.getElementById('modalCarreras')).show();
+});
+
+function cargarListaCarreras() {
+    fetch("../backend/src/Public/get_carreras.php")
+        .then(r => r.json())
+        .then(data => {
+            // 1. Actualizamos la lista del modal de gestión
+            const lista = document.getElementById("lista-carreras");
+            lista.innerHTML = "";
+            
+            // 2. ¡NUEVO! Actualizamos el <select> de Nuevo Examen al mismo tiempo
+            const selectFormulario = document.getElementById("carrera_id");
+            selectFormulario.innerHTML = '<option value="">Seleccione una carrera...</option>';
+
+            data.forEach(c => {
+                // Agregamos a la lista con el botón de borrar
+                lista.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${c.nombre}
+                        <button class="btn btn-sm btn-outline-danger" onclick="borrarCarrera(${c.id})">🗑️</button>
+                    </li>`;
+                
+                // Agregamos como opción seleccionable al formulario
+                selectFormulario.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
+            });
+        });
+}
+
+document.getElementById("btn-guardar-carrera").addEventListener("click", () => {
+    const formData = new FormData();
+    formData.append("nombre", document.getElementById("nueva-carrera").value);
+    fetch("../backend/src/CRUD/add_carrera.php", { method: "POST", body: formData })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) { 
+                document.getElementById("nueva-carrera").value = ""; 
+                cargarListaCarreras(); 
+            } else alert("Error al guardar.");
+        });
+});
+
+window.borrarCarrera = function(id) {
+    if(!confirm("¿Seguro que deseas borrar esta carrera?")) return;
+    const formData = new FormData(); formData.append("id", id);
+    fetch("../backend/src/CRUD/delete_carrera.php", { method: "POST", body: formData })
+        .then(r => r.json())
+        .then(d => { if(d.success) cargarListaCarreras(); else alert(d.message); });
+};
+
+// --- Lógica de Espacios ---
+document.getElementById("btn-espacios").addEventListener("click", () => {
+    cargarListaEspacios();
+    new bootstrap.Modal(document.getElementById('modalEspacios')).show();
+});
+
+function cargarListaEspacios() {
+    fetch("../backend/src/Public/get_espacios.php")
+        .then(r => r.json())
+        .then(data => {
+            // 1. Actualizamos la lista del modal de gestión
+            const lista = document.getElementById("lista-espacios");
+            lista.innerHTML = "";
+
+            // 2. ¡NUEVO! Actualizamos el <select> de Nuevo Examen
+            const selectFormulario = document.getElementById("espacio_id");
+            selectFormulario.innerHTML = '<option value="">Seleccione un espacio...</option>';
+
+            data.forEach(e => {
+                const nombreEspacio = `Edificio ${e.edificio} - Salón ${e.salon}`;
+                
+                // Agregamos a la lista con el botón de borrar
+                lista.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${nombreEspacio}
+                        <button class="btn btn-sm btn-outline-danger" onclick="borrarEspacio(${e.id})">🗑️</button>
+                    </li>`;
+                
+                // Agregamos como opción seleccionable al formulario
+                selectFormulario.innerHTML += `<option value="${e.id}">${nombreEspacio}</option>`;
+            });
+        });
+}
+
+document.getElementById("btn-guardar-espacio").addEventListener("click", () => {
+    const formData = new FormData();
+    formData.append("edificio", document.getElementById("nuevo-edificio").value);
+    formData.append("salon", document.getElementById("nuevo-salon").value);
+    fetch("../backend/src/CRUD/add_espacio.php", { method: "POST", body: formData })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) { 
+                document.getElementById("nuevo-edificio").value = ""; 
+                document.getElementById("nuevo-salon").value = ""; 
+                cargarListaEspacios(); 
+            } else alert("Error al guardar.");
+        });
+});
+
+window.borrarEspacio = function(id) {
+    if(!confirm("¿Seguro que deseas borrar este salón?")) return;
+    const formData = new FormData(); formData.append("id", id);
+    fetch("../backend/src/CRUD/delete_espacio.php", { method: "POST", body: formData })
+        .then(r => r.json())
+        .then(d => { if(d.success) cargarListaEspacios(); else alert(d.message); });
+};

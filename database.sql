@@ -35,9 +35,9 @@ CREATE TABLE examen (
     profesor VARCHAR(100) NOT NULL,
     carrera_id INT NOT NULL,
     espacio_id INT NOT NULL,
-    FOREIGN KEY (carrera_id) REFERENCES carrera(id) ON DELETE CASCADE,
-    FOREIGN KEY (espacio_id) REFERENCES espacio(id) ON DELETE CASCADE
-);
+    FOREIGN KEY (carrera_id) REFERENCES carrera(id) ON DELETE RESTRICT,
+    FOREIGN KEY (espacio_id) REFERENCES espacio(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
 
 
 -- Contraseña por defecto: password (Hasheada con BCRYPT)

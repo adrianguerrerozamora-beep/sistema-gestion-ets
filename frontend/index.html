@@ -60,6 +60,9 @@
 
         <!-- Botón de PDF oculto por defecto -->
         <div class="d-flex justify-content-end mb-2">
+            <button id="btn-ics-publico" class="btn btn-outline-info d-none d-flex align-items-center gap-2">
+                📅 Descargar iCalendar (.ics)
+            </button>
             <button id="btn-pdf-alumno" class="btn btn-outline-danger d-none d-flex align-items-center gap-2">
                 Descargar mi Horario PDF
             </button>
@@ -70,6 +73,7 @@
             <table class="table table-striped table-hover align-middle border mb-0" id="tabla-busqueda">
                 <thead class="table-dark">
                     <tr>
+                        <th class="text-center" style="width: 50px;">Sel.</th>
                         <th>Materia</th>
                         <th>Carrera</th>
                         <th class="text-center">Sem.</th>
